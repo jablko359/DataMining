@@ -1,0 +1,5 @@
+*.sln
+bin
+debug
+*.rar
+*.zip
