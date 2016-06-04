@@ -18,21 +18,27 @@ namespace AGDSPresentationDB.AGDS
         public AGDSGraph BuildGraph()
         {
             _decompositor.Decompose();
-            List<Node> tableNodes = new List<Node>();
-            foreach (DbTable table in _decompositor.Tables)
+            var tableNodes = new Dictionary<string, Node>();
+            foreach (var table in _decompositor.Tables)
             {
-                if(table.Name != "sysdiagrams")
-                    tableNodes.AddRange(CreateGraphForTable(table));
+                if (table.Name != "sysdiagrams")
+                {
+                    foreach (var node in CreateGraphForTable(table))
+                    {
+                        tableNodes.Add(node.Key, node.Value);
+                    }
+                }
+
             }
             SetRelations();
             foreach (Node allNode in _allNodes)
             {
-                
+
             }
             return new AGDSGraph(tableNodes, _allNodes);
         }
 
-        private List<Node> CreateGraphForTable(DbTable table)
+        private Dictionary<string, Node> CreateGraphForTable(DbTable table)
         {
             List<Node> tableNodes = new List<Node>();
             Dictionary<object, Node> primaryNodes = new Dictionary<object, Node>();
@@ -41,7 +47,7 @@ namespace AGDSPresentationDB.AGDS
             {
                 if (column.Key != table.PrimaryKey && !table.RealtedTables.ContainsKey(column.Key))
                 {
-                    Node columnNode = new Node(column.Key);
+                    Node columnNode = new Node(string.Format("{0}.{1}", table.Name, column.Key));
                     _allNodes.Add(columnNode);
                     Dictionary<object, Node> valueNodes = new Dictionary<object, Node>();
                     for (int i = 0; i < column.Value.Count; i++)
@@ -80,7 +86,13 @@ namespace AGDSPresentationDB.AGDS
                 }
             }
             _neuronsDictionary.Add(table.Name, primaryNodes);
-            return tableNodes;
+            Dictionary<string, Node> resultDictionary = new Dictionary<string, Node>();
+            foreach (Node node in tableNodes)
+            {
+
+                resultDictionary.Add(node.Key, node);
+            }
+            return resultDictionary;
         }
 
         private void SetRelations()
@@ -107,6 +119,7 @@ namespace AGDSPresentationDB.AGDS
             }
         }
     }
+    #region Promary Key class
 
     public class DbPrimaryKey
     {
@@ -131,7 +144,7 @@ namespace AGDSPresentationDB.AGDS
 
         public override string ToString()
         {
-            return string.Format("PK - {0} : {1}", _tableName, _value);
+            return string.Format("{0}.{1}", _tableName, _value);
         }
 
         public override bool Equals(object obj)
@@ -144,4 +157,5 @@ namespace AGDSPresentationDB.AGDS
             return _value.GetHashCode();
         }
     }
+    #endregion
 }

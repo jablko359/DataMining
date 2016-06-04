@@ -36,6 +36,7 @@ namespace AGDSPresentationDB.ViewModels
         private NodesGraph _visualGraph;
         private bool _isGraphAvaliable = true;
         private IWindowService _windowService = new WindowService();
+        private int _searchDepth = 3;
 
         private const int NodesLimit = 300;
         public const string SearchDepthString = "Powiązane klucze";
@@ -46,6 +47,19 @@ namespace AGDSPresentationDB.ViewModels
         #region Properties
 
         public List<string> SearchOptions { get; private set; }
+
+        
+
+        public int SearchDepth
+        {
+            get { return _searchDepth; }
+            set
+            {
+                _searchDepth = value;
+                OnPropertyChanged(nameof(SearchDepth));
+            }
+        }
+
 
         public SearchOption SearchOpt
         {
@@ -96,7 +110,7 @@ namespace AGDSPresentationDB.ViewModels
             {
                 if (_graph != null)
                 {
-                    return new ObservableCollection<Node>(_graph.Receptors);
+                    return new ObservableCollection<Node>(_graph.Receptors.Values);
                 }
                 return new ObservableCollection<Node>();
             }
@@ -192,7 +206,7 @@ namespace AGDSPresentationDB.ViewModels
         {
             try
             {
-                string querry = (paramerer as string).Trim();
+                var querry = (paramerer as string).Trim();
                 if (!string.IsNullOrEmpty(querry) && _graph != null)
                 {
                     QueryParser querryParser = new QueryParser(querry);
@@ -201,7 +215,7 @@ namespace AGDSPresentationDB.ViewModels
                         switch (_searchOpt)
                         {
                             case SearchOption.Default:
-                                _graph.Find(querryParser.Querries);
+                                _graph.Find(querryParser.Querries, SearchDepth);
                                 break;
                             //case SearchOption.Depth:
                             //    _graph.FindDepth(querryParser.Querries);
@@ -223,7 +237,7 @@ namespace AGDSPresentationDB.ViewModels
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            
+
 
         }
 
@@ -286,7 +300,7 @@ namespace AGDSPresentationDB.ViewModels
 
         private void HideDepth(object parameter)
         {
-            int value = (int) ((double) parameter);
+            int value = (int)((double)parameter);
             if (_graph != null)
             {
                 _graph.HideDepth(value);

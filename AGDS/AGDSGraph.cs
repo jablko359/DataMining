@@ -42,7 +42,7 @@ namespace AGDS
                 string currentPropertyName = (string)node.Value;
                 foreach (GraphNode valueNode in node.Children)
                 {
-                    if(valueNode.Value.GetType() == typeof(double))
+                    if(valueNode.Value is double)
                     {
                         double currentValue = (double)valueNode.Value;
                         double min = node.MinParam < propertyInfoDict[currentPropertyName] ? node.MinParam : propertyInfoDict[currentPropertyName];

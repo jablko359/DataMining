@@ -87,6 +87,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tools\AlphanumComparator.cs" />
     <Compile Include="Tools\Converters.cs" />
     <Compile Include="Tools\QueryParser.cs" />
     <Compile Include="ViewModels\Command.cs" />

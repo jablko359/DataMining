@@ -55,7 +55,7 @@ namespace AGDSPresentationDB.Tools
                         objectArg = GetValue(argument);
                     }
                     Query query = new Query(splitedArg[0], objectArg, compareType);
-                    _querries.Add(splitedArg[0].ToLower().Trim(), query);
+                    _querries.Add(splitedArg[0].Trim(), query);
                 }
                 else
                 {

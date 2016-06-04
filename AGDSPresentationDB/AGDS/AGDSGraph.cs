@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Policy;
 using AGDSPresentationDB.Tools;
@@ -10,11 +11,12 @@ namespace AGDSPresentationDB.AGDS
 {
     public class AGDSGraph : PropertyChanger
     {
-        private List<Node> _repetors;
+        private Dictionary<string, Node> _repetors;
         private List<Node> _allNodes;
         private int _maxDepth = 0;
-        
 
+        public const int MaxSearchDepth = 10;
+        public const int MinSearchDepth = 10;
 
         public int MaxDepth
         {
@@ -28,7 +30,7 @@ namespace AGDSPresentationDB.AGDS
 
 
 
-        public List<Node> Receptors
+        public Dictionary<string, Node> Receptors
         {
             get { return _repetors; }
             set { _repetors = value; }
@@ -40,86 +42,121 @@ namespace AGDSPresentationDB.AGDS
             private set { _allNodes = value; }
         }
 
-        public AGDSGraph(List<Node> receptors, List<Node> allNodes)
+        public AGDSGraph(Dictionary<string, Node> receptors, List<Node> allNodes)
         {
             _repetors = receptors;
             _allNodes = allNodes;
         }
-
+        #region Find
         public void FindInGraph(IReadOnlyDictionary<string, Query> receptorDictionary)
         {
-            foreach (Node Node in _allNodes)
+            foreach (var node in _allNodes)
             {
-                Node.Weight = 0;
+                node.Weight = 0;
             }
-            foreach (Node receptor in _repetors)
+            foreach (var nodeQuery in receptorDictionary)
             {
-                if (receptorDictionary.ContainsKey(receptor.Value.ToString().ToLower()))
+                Node receptorNode;
+                if (_repetors.TryGetValue(nodeQuery.Key, out receptorNode))
                 {
-                    Query qr = receptorDictionary[receptor.Value.ToString().ToLower()];
-                    receptor.Weight = Int32.MinValue;
-                    List<Node> items = receptor.Nodes;
-                    foreach (Node item in items)
+                    receptorNode.Weight = int.MinValue;
+                    foreach (var value in receptorNode.Nodes.Values)
                     {
-                        if (CompareValues(qr, item))
+                        if (CompareValues(nodeQuery.Value, value))
                         {
-                            item.Weight = Int32.MinValue;
-                            foreach (Node node in item.Nodes)
+                            value.Weight = int.MinValue;
+                            foreach (var node in value.Nodes.Values)
                             {
-                                node.IsMarked = true;
                                 node.Weight++;
-                            }
-                        }
-                    }
-                }
-            }
-            //TodO ?
-            foreach (var node in _allNodes.Where(node => node.IsMarked))
-            {
-                foreach (Node subNode in node.Nodes)
-                {
-                    subNode.Weight++;
-                    foreach (Node parameterNode in subNode.Nodes.Where(parameterNode => !(parameterNode.Value is DbPrimaryKey)))
-                    {
-                        parameterNode.Weight++;
-                    }
-                }
-            }
-        }
-
-        public void Find(IReadOnlyDictionary<string, Query> queries)
-        {
-            foreach (Node node in _allNodes)
-            {
-                node.IsSelected = false;
-            }
-            foreach (Node receptor in _repetors)
-            {
-                receptor.IsSelected = true;
-                string receptorName = receptor.Value.ToString().ToLower();
-                if (queries.ContainsKey(receptorName.ToLower()))
-                {
-                    Query qr = queries[receptorName];
-                    List<Node> items = receptor.Nodes;
-
-                    foreach (Node item in items)
-                    {
-                        if (CompareValues(qr, item))
-                        {
-                            item.IsSelected = true;
-                            foreach (Node node in item.Nodes)
-                            {
-                                node.IsSelected = true;
-                                DbPrimaryKey tableName = node.Value as DbPrimaryKey;
-                                if (tableName != null)
+                                foreach (var subNode in node.Nodes.Values)
                                 {
-                                    node.SetConnectedNodesSelected(item, true, tableName.TableName);
+                                    subNode.Weight++;
+                                    if (subNode.Value is DbPrimaryKey)
+                                    {
+
+                                        foreach (Node itemNode in subNode.Nodes.Values)
+                                        {
+                                            itemNode.Weight++;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+
+            //foreach (Node receptor in _repetors.Values)
+            //{
+            //    if (receptorDictionary.ContainsKey(receptor.Value.ToString().ToLower()))
+            //    {
+            //        Query qr = receptorDictionary[receptor.Value.ToString().ToLower()];
+            //        receptor.Weight = Int32.MinValue;
+            //        List<Node> items = receptor.Nodes.Values.ToList();
+            //        foreach (Node item in items)
+            //        {
+            //            if (CompareValues(qr, item))
+            //            {
+            //                item.Weight = Int32.MinValue;
+            //                foreach (Node node in item.Nodes.Values)
+            //                {
+            //                    node.IsMarked = true;
+            //                    node.Weight++;
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+            ////TodO ?
+            //foreach (var node in _allNodes.Where(node => node.IsMarked))
+            //{
+            //    foreach (Node subNode in node.Nodes.Values)
+            //    {
+            //        subNode.Weight++;
+            //        foreach (Node parameterNode in subNode.Nodes.Values.Where(parameterNode => !(parameterNode.Value is DbPrimaryKey)))
+            //        {
+            //            parameterNode.Weight++;
+            //        }
+            //    }
+            //}
+        }
+
+        public void Find(IReadOnlyDictionary<string, Query> queries, int maxDepth)
+        {
+            foreach (Node node in _allNodes)
+            {
+                node.IsSelected = false;
+            }
+            Stopwatch watch = Stopwatch.StartNew();
+            foreach (Node receptor in _repetors.Values)
+            {
+                receptor.IsSelected = true;
+                string receptorName = receptor.Value.ToString();
+                if (queries.ContainsKey(receptorName))
+                {
+                    Query qr = queries[receptorName];
+                    List<Node> items = receptor.Nodes.Values.ToList();
+
+                    foreach (Node item in items)
+                    {
+                        if (CompareValues(qr, item))
+                        {
+                            item.IsSelected = true;
+                            foreach (Node node in item.Nodes.Values)
+                            {
+                                node.IsSelected = true;
+                                DbPrimaryKey tableName = node.Value as DbPrimaryKey;
+                                if (tableName != null)
+                                {
+                                    node.SetConnectedNodesSelected(item, true, tableName.TableName, 0, maxDepth);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            watch.Stop();
+            Console.WriteLine();
 
         }
 
@@ -129,13 +166,13 @@ namespace AGDSPresentationDB.AGDS
             {
                 node.IsSelected = false;
             }
-            foreach (Node receptor in _repetors)
+            foreach (Node receptor in _repetors.Values)
             {
                 receptor.IsSelected = true;
                 receptor.CurrentDepth = 0;
                 if (receptorDictionary.ContainsKey(receptor.Value.ToString().ToLower()))
                 {
-                    List<Node> items = receptor.Nodes;
+                    List<Node> items = receptor.Nodes.Values.ToList();
                     string searchingValue = receptorDictionary[receptor.Value.ToString().ToLower()];
                     foreach (Node item in items)
                     {
@@ -143,7 +180,7 @@ namespace AGDSPresentationDB.AGDS
                         {
                             item.IsSelected = true;
                             item.CurrentDepth = 0;
-                            foreach (Node node in item.Nodes)
+                            foreach (Node node in item.Nodes.Values)
                             {
                                 node.IsSelected = true;
                                 node.CurrentDepth = 0;
@@ -159,7 +196,7 @@ namespace AGDSPresentationDB.AGDS
             }
             MaxDepth = _allNodes.Select(item => item.CurrentDepth).Max();
         }
-
+        #endregion
         private static bool CompareValues(Query query, Node itemNode)
         {
             try
@@ -203,7 +240,7 @@ namespace AGDSPresentationDB.AGDS
 
             node.Clear();
             _allNodes.Remove(node);
-            _repetors.Remove(node);
+            _repetors.Remove(node.Key);
         }
 
         public void Reset()
@@ -235,18 +272,21 @@ namespace AGDSPresentationDB.AGDS
     #region Nodes
     public class Node : PropertyChanger, IComparable<Node>
     {
-        private readonly List<Node> _nodes = new List<Node>();
+        #region Private
+        private readonly SortedDictionary<string, Node> _nodes = new SortedDictionary<string, Node>(new AlphanumComparatorFast());
         private readonly object _value;
         private bool _isSelected = true;
         private int _weight;
         private bool _isMarked;
-
+        private string _key;
+        #endregion
+        #region Properties
         public object Value
         {
             get { return _value; }
         }
 
-        public List<Node> Nodes
+        public SortedDictionary<string, Node> Nodes
         {
             get { return _nodes; }
         }
@@ -254,6 +294,7 @@ namespace AGDSPresentationDB.AGDS
         public Node(object value)
         {
             _value = value;
+            _key = value.ToString();
         }
 
         public bool IsMarked
@@ -271,6 +312,11 @@ namespace AGDSPresentationDB.AGDS
                 _isSelected = value;
                 OnPropertyChanged(nameof(IsSelected));
             }
+        }
+
+        public string Key
+        {
+            get { return _key; }
         }
 
         private int _currentDepth = -1;
@@ -296,14 +342,14 @@ namespace AGDSPresentationDB.AGDS
                 OnPropertyChanged(nameof(Weight));
             }
         }
+        #endregion
 
 
         public void AddItem(Node node)
         {
-            if (!_nodes.Contains(node))
+            if (!_nodes.ContainsKey(node.Key))
             {
-                _nodes.Add(node);
-                _nodes.Sort();
+                _nodes.Add(node.Key, node);
             }
         }
 
@@ -326,9 +372,13 @@ namespace AGDSPresentationDB.AGDS
             return _value.ToString();
         }
 
-        public void SetConnectedNodesSelected(Node prevNode, bool updatePk, string tableName)
+        public void SetConnectedNodesSelected(Node prevNode, bool updatePk, string tableName, int depth, int maxDepth)
         {
-            foreach (Node node in Nodes)
+            if (depth >= maxDepth)
+            {
+                return;
+            }
+            foreach (Node node in Nodes.Values)
             {
                 if (node != prevNode && !node.IsSelected)
                 {
@@ -336,7 +386,7 @@ namespace AGDSPresentationDB.AGDS
                     if (pk == null)
                     {
                         node.IsSelected = true;
-                        node.SetConnectedNodesSelected(this, false, tableName);
+                        node.SetConnectedNodesSelected(this, false, tableName, depth + 1, maxDepth);
                     }
                     else if (updatePk)
                     {
@@ -350,7 +400,7 @@ namespace AGDSPresentationDB.AGDS
                         if (pk.TableName != tableName && Value is DbPrimaryKey && selectNextNode)
                         {
                             node.IsSelected = true;
-                            node.SetConnectedNodesSelected(this, true, tableName);
+                            node.SetConnectedNodesSelected(this, true, tableName, depth + 1, maxDepth);
                         }
                         else
                         {
@@ -364,7 +414,7 @@ namespace AGDSPresentationDB.AGDS
 
         public void SetConnectedNodes(Node prevNode, int depth)
         {
-            foreach (Node node in Nodes)
+            foreach (Node node in Nodes.Values)
             {
                 if (node != prevNode)
                 {
@@ -374,7 +424,7 @@ namespace AGDSPresentationDB.AGDS
                     }
                 }
             }
-            foreach (Node node in Nodes)
+            foreach (Node node in Nodes.Values)
             {
                 if (node != prevNode && (depth <= node.CurrentDepth || node.CurrentDepth == -1))
                 {
@@ -391,13 +441,13 @@ namespace AGDSPresentationDB.AGDS
 
         public void DeleteRealation(Node node)
         {
-            _nodes.Remove(node);
+            _nodes.Remove(node.Key);
             OnPropertyChanged("Nodes");
         }
 
         public virtual void Clear()
         {
-            foreach (Node itemNode in Nodes)
+            foreach (Node itemNode in Nodes.Values)
             {
                 itemNode.DeleteRealation(this);
             }
@@ -464,7 +514,7 @@ namespace AGDSPresentationDB.AGDS
             }
             foreach (Node node in graph.AllNodes)
             {
-                foreach (Node childNode in node.Nodes)
+                foreach (Node childNode in node.Nodes.Values)
                 {
                     GraphEdge edge = new GraphEdge(node, childNode);
                     AddEdge(edge);
