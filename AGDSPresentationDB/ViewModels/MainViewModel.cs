@@ -34,6 +34,8 @@ namespace AGDSPresentationDB.ViewModels
         private string _selectedLayout = "LinLog";
         private List<String> _layoutAlgorithmTypes = new List<string>(new[] { "BoundedFR", "Circular", "CompoundFDP", "EfficientSugiyama", "FR", "ISOM", "KK", "LinLog", "Tree" });
         private NodesGraph _visualGraph;
+        private NodesGraph _selectedItemsGraph;
+
         private bool _isGraphAvaliable = true;
         private IWindowService _windowService = new WindowService();
         private int _searchDepth = 3;
@@ -121,9 +123,22 @@ namespace AGDSPresentationDB.ViewModels
             set
             {
                 _visualGraph = value;
-                OnPropertyChanged("VisualGraph");
+                OnPropertyChanged(nameof(VisualGraph));
             }
         }
+
+        
+
+        public NodesGraph SelectedItemsGraph
+        {
+            get { return _selectedItemsGraph; }
+            set
+            {
+                _selectedItemsGraph = value;
+                OnPropertyChanged(nameof(SelectedItemsGraph));
+            }
+        }
+
         public bool IsGraphAvaliable
         {
             get { return _isGraphAvaliable; }
@@ -210,12 +225,16 @@ namespace AGDSPresentationDB.ViewModels
                 if (!string.IsNullOrEmpty(querry) && _graph != null)
                 {
                     QueryParser querryParser = new QueryParser(querry);
+                    List<Node> selected;
                     if (querryParser.ParseQuerry())
                     {
                         switch (_searchOpt)
                         {
                             case SearchOption.Default:
-                                _graph.Find(querryParser.Querries, SearchDepth);
+                                selected = _graph.SearcNodes(querryParser.Querries, SearchDepth);
+                                NodesGraph selectedNodesGraph = new NodesGraph(false);
+                                selectedNodesGraph.BuildGraphFromSelected(selected);
+                                SelectedItemsGraph = selectedNodesGraph;
                                 break;
                             //case SearchOption.Depth:
                             //    _graph.FindDepth(querryParser.Querries);
@@ -224,6 +243,7 @@ namespace AGDSPresentationDB.ViewModels
                                 _graph.FindInGraph(querryParser.Querries);
                                 break;
                         }
+                       
                         OnPropertyChanged(nameof(MaxDepth));
                     }
                     else

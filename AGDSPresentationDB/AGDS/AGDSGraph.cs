@@ -120,44 +120,64 @@ namespace AGDSPresentationDB.AGDS
             //    }
             //}
         }
-
-        public void Find(IReadOnlyDictionary<string, Query> queries, int maxDepth)
+       
+        public List<Node> SearcNodes(IReadOnlyDictionary<string, Query> queries, int maxDepth)
         {
+            //ToDo parse by tree
+            List<Node> results = new List<Node>();
+            foreach (var pair in queries)
+            {
+                results.AddRange(Find(pair.Value, maxDepth));
+            }
+            //ToDo set Is Selected based on query and quqer list
+
+
+            return results;
+        }
+
+      
+        public List<Node> Find(Query inputQuery, int maxDepth)
+        {
+            List<Node> resultGraph = new List<Node>();
             foreach (Node node in _allNodes)
             {
                 node.IsSelected = false;
             }
-            Stopwatch watch = Stopwatch.StartNew();
-            foreach (Node receptor in _repetors.Values)
+            Dictionary<Query, List<Node>> fullfilledDictionary = new Dictionary<Query, List<Node>>();
+            Node receptorNode;
+            if (_repetors.TryGetValue(inputQuery.QueryName.Trim(), out receptorNode))
             {
-                receptor.IsSelected = true;
-                string receptorName = receptor.Value.ToString();
-                if (queries.ContainsKey(receptorName))
-                {
-                    Query qr = queries[receptorName];
-                    List<Node> items = receptor.Nodes.Values.ToList();
+                receptorNode.IsSelected = true;
+                string receptorName = receptorNode.Value.ToString();
+                List<Node> items = receptorNode.Nodes.Values.ToList();
 
-                    foreach (Node item in items)
+                foreach (Node item in items)
+                {
+                    if (CompareValues(inputQuery, item))
                     {
-                        if (CompareValues(qr, item))
+                        item.IsSelected = true;
+                        foreach (Node node in item.Nodes.Values)
                         {
-                            item.IsSelected = true;
-                            foreach (Node node in item.Nodes.Values)
+                            node.IsSelected = true;
+                            DbPrimaryKey tableName = node.Value as DbPrimaryKey;
+                            if (tableName != null)
                             {
-                                node.IsSelected = true;
-                                DbPrimaryKey tableName = node.Value as DbPrimaryKey;
-                                if (tableName != null)
-                                {
-                                    node.SetConnectedNodesSelected(item, true, tableName.TableName, 0, maxDepth);
-                                }
+                                node.SetConnectedNodesSelected(item, true, tableName.TableName, 0, maxDepth);
                             }
                         }
                     }
                 }
             }
-            watch.Stop();
-            Console.WriteLine();
-
+            foreach (var receptor in _repetors.Values)
+            {
+                if (receptor.Nodes.Any(item => item.Value.IsSelected))
+                {
+                    receptor.IsSelected = true;
+                }
+            }
+            resultGraph.AddRange(_allNodes.Where(item => item.IsSelected));
+            
+            return resultGraph;
         }
 
         public void FindDepth(IReadOnlyDictionary<string, string> receptorDictionary)
@@ -291,11 +311,7 @@ namespace AGDSPresentationDB.AGDS
             get { return _nodes; }
         }
 
-        public Node(object value)
-        {
-            _value = value;
-            _key = value.ToString();
-        }
+
 
         public bool IsMarked
         {
@@ -343,6 +359,18 @@ namespace AGDSPresentationDB.AGDS
             }
         }
         #endregion
+
+        public Node(object value)
+        {
+            _value = value;
+            _key = value.ToString();
+        }
+
+        public Node(Node node)
+        {
+            _value = node.Value;
+            _key = node.Key;
+        }
 
 
         public void AddItem(Node node)
@@ -508,16 +536,34 @@ namespace AGDSPresentationDB.AGDS
 
         public void BuildGraph(AGDSGraph graph)
         {
-            foreach (Node node in graph.AllNodes)
+            foreach (var node in graph.AllNodes)
             {
                 AddVertex(node);
             }
-            foreach (Node node in graph.AllNodes)
+            foreach (var edge in from node in graph.AllNodes from childNode in node.Nodes.Values select new GraphEdge(node, childNode))
+            {
+                AddEdge(edge);
+            }
+        }
+
+        public void BuildGraphFromSelected(List<Node> nodes)
+        {
+            foreach (Node node in nodes)
+            {
+                if (node.IsSelected)
+                {
+                    AddVertex(node);
+                }
+            }
+            foreach (Node node in nodes)
             {
                 foreach (Node childNode in node.Nodes.Values)
                 {
-                    GraphEdge edge = new GraphEdge(node, childNode);
-                    AddEdge(edge);
+                    if (node.IsSelected && childNode.IsSelected)
+                    {
+                        GraphEdge edge = new GraphEdge(node, childNode);
+                        AddEdge(edge);
+                    }
                 }
             }
         }
