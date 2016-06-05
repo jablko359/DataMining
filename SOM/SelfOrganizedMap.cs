@@ -17,7 +17,13 @@ namespace SOM
         private int _currentIteration = 1;
         private double _weightFactor = 1;
         private Node _currentNearstNode;
+        private List<InputVector> _vectors;
         private Dictionary<InputVector, Node> _vectorToNodes = new Dictionary<InputVector, Node>();
+
+        public Node[,] NodesMatrix
+        {
+            get { return _nodesMatrix; }
+        }
 
         public SelfOrganizedMap(int x, int y, double narrowingConstant, double precision, double nodeRandomScale = 1)
         {
@@ -34,6 +40,7 @@ namespace SOM
 
         public void BuildMap(List<InputVector> vectors, int atributesCount)
         {
+            _vectors = vectors;
             for (int i = 0; i < _xSize; i++)
             {
                 for (int j = 0; j < _ySize; j++)
@@ -145,13 +152,19 @@ namespace SOM
                 neighbor.OldWeights = new List<double>(neighbor.Weights);
                 for (int i = 0; i < neighbor.Weights.Count; i++)
                 {
-                     neighbor.Weights[i] = neighbor.Weights[i] + GetDistanceFactor(neighbor) * _weightFactor * (vector.Values[i] - neighbor.Weights[i]);
+                    neighbor.Weights[i] = neighbor.Weights[i] + GetDistanceFactor(neighbor) * _weightFactor * (vector.Values[i] - neighbor.Weights[i]);
                 }
             }
         }
 
         private bool CheckStopCondition()
         {
+
+            foreach (Node node in _nodesMatrix)
+            {
+                InputVector vector = FindNearestInput(node);
+                node.Name = vector.Name;
+            }
             if (_vectorToNodes.Count == 0)
             {
                 return false;
@@ -166,13 +179,7 @@ namespace SOM
                     }
                 }
             }
-            //foreach (KeyValuePair<InputVector, Node> node in _vectorToNodes)
-            //{
-            //    if (GetDistance(node.Key, node.Value) > _desiredPrecision)
-            //    {
-            //        return false;
-            //    }
-            //}
+
             return true;
         }
 
@@ -195,6 +202,22 @@ namespace SOM
             }
             return null;
 
+        }
+
+        private InputVector FindNearestInput(Node item)
+        {
+            InputVector result = null;
+            double distance = double.MaxValue;
+            foreach (InputVector inputVector in _vectors)
+            {
+                double currentDistance = GetDistance(inputVector, item);
+                if (currentDistance < distance)
+                {
+                    result = inputVector;
+                    distance = currentDistance;
+                }
+            }
+            return result;
         }
     }
 }

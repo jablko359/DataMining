@@ -13,6 +13,12 @@ namespace SOM
     {
         private Dictionary<string, double> _attributes = new Dictionary<string, double>();
         private List<double> _values = new List<double>();
+        private string _name;
+
+        public string Name
+        {
+            get { return _name; }
+        }
 
         public IReadOnlyDictionary<string, double> Attributes
         {
@@ -24,8 +30,9 @@ namespace SOM
             get { return _values; }
         } 
 
-        public InputVector(IList<string> atributeNames, IList<double> values)
+        public InputVector(IList<string> atributeNames, IList<double> values, string name)
         {
+            _name = name;
             if (atributeNames.Count != values.Count)
             {
                 throw new Exception("Atribute names and values count must be the smae");
@@ -43,11 +50,13 @@ namespace SOM
         private string _filePath;
         public int AtributesCount { get; private set; }
         public IList<string> AttributesList { get; private set; }
+        public Dictionary<string,int> ClassNames { get; private set; }   
 
         public InputDataSetDeserializator(string fielPath)
         {
             _filePath = fielPath;
             AtributesCount = 0;
+            ClassNames = new Dictionary<string, int>();
         }
 
         public List<InputVector> Deserialize()
@@ -60,11 +69,14 @@ namespace SOM
                 {
                     string atr = reader.ReadLine();
                     string[] atributes = atr.Split();
-                    AttributesList = atributes;
-                    AtributesCount = atributes.Length;
+                    string[] attr = new string[atributes.Length - 1];
+                    Array.Copy(atributes, attr,atributes.Length - 1);
+                    AttributesList = attr;
+                    AtributesCount = attr.Length;
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {
+                        string name = string.Empty;
                         string[] values = line.Split();
                         List<double> doubleValues = new List<double>();
                         foreach (string value in values)
@@ -76,14 +88,14 @@ namespace SOM
                             }
                             else
                             {
-                                throw new InvalidDataException("Only double attributes are supported");
+                                name = value;
                             }
                         }
-                        if (atributes.Length != doubleValues.Count)
+                        if (attr.Length != doubleValues.Count)
                         {
                             throw new ArgumentOutOfRangeException("Atribute not defined");
                         }
-                        InputVector vector = new InputVector(atributes, doubleValues);
+                        InputVector vector = new InputVector(attr, doubleValues,name);
                         vectors.Add(vector);
                     }
                     return vectors;

@@ -29,7 +29,7 @@ namespace DataExploration
                             _transactionlist = deserializer.Deserialzie(openStream).ToList();
                             List<IExplorable> _explorableList = new List<IExplorable>(_transactionlist);
                             DataExplorer explorer = new DataExplorer(_explorableList);
-                            Console.WriteLine(DataExplorer.PrintDictionary(explorer.GetMostFrequent(0.4)));
+                            Console.WriteLine(DataExplorer.PrintDictionary(explorer.GetMostFrequent(0.3)));
                             Console.Read();
                         }
                     }

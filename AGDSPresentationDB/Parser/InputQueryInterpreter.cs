@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -241,6 +242,10 @@ namespace AGDSPresentationDB.Parser
                 return longValue;
             }
             if (Double.TryParse(value, out doubleValue))
+            {
+                return doubleValue;
+            }
+            if (double.TryParse(value, NumberStyles.Number, CultureInfo.CreateSpecificCulture("en-US"), out doubleValue))
             {
                 return doubleValue;
             }

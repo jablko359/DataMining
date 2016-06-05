@@ -29,15 +29,39 @@ namespace ConsoleApplication1
                     {
                         irises = serializer.Deserialize(stream: openStream);
                         List<IClassificable> classificable = new List<IClassificable>();
-                        foreach(Iris iris in irises)
+                        List<IClassificable> trainingSet = new List<IClassificable>();
+                        foreach (Iris iris in irises)
                         {
                             classificable.Add(iris);
+                            Iris trainingIris = new Iris
+                            {
+                                LeafLength = iris.LeafLength,
+                                LeafWidth = iris.LeafWidth,
+                                PetalLength = iris.PetalLength,
+                                PetalWidth = iris.PetalWidth,
+                                Class = iris.Class
+                            };
+                            trainingSet.Add(trainingIris);
                         }
-                        CrossValidationKnn valdiation = new CrossValidationKnn(classificable,10);
+                        
+                        CrossValidationKnn valdiation = new CrossValidationKnn(classificable, 10);
                         var t = valdiation.GetBestCoefficient();
                         Console.WriteLine(string.Format("Best found k is: {0}, effectivness: {1}", t.Item1, t.Item2));
+                        NearestNeighboursAlgorithm knn = new NearestNeighboursAlgorithm(trainingSet, t.Item1);
+                        Iris searchIris = new Iris();
+                        Console.WriteLine("LeafLength:");
+                        double leafLength = double.Parse(Console.ReadLine());
+                        searchIris.LeafLength = leafLength;
+                        Console.WriteLine("LeafWidth:");
+                        searchIris.LeafWidth = double.Parse(Console.ReadLine());
+                        Console.WriteLine("PetalLength:");
+                        searchIris.PetalLength = double.Parse(Console.ReadLine());
+                        Console.WriteLine("PetalWidth:");
+                        searchIris.PetalWidth = double.Parse(Console.ReadLine());
+                        string cls = knn.Classify(searchIris);
+                        Console.WriteLine("Iris class is {0}", cls);
                         Console.Read();
-                        
+
                     }
                 }
                 catch (Exception e)

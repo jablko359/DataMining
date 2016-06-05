@@ -12,6 +12,11 @@ namespace SOM
         private List<double> _oldWeights; 
         private static Random WeightGeneratoRandom = new Random();
 
+        public string Name
+        {
+            get; set;
+        }
+
         public static double Scale = 1;
 
         public List<double> Weights
