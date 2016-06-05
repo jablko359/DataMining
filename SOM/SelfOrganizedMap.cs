@@ -142,9 +142,10 @@ namespace SOM
             List<Node> neighbors = GetNodeNeighborhood(startNode, _currentDistance);
             foreach (Node neighbor in neighbors)
             {
+                neighbor.OldWeights = new List<double>(neighbor.Weights);
                 for (int i = 0; i < neighbor.Weights.Count; i++)
                 {
-                    neighbor.Weights[i] = neighbor.Weights[i] + GetDistanceFactor(neighbor) * _weightFactor * (vector.Values[i] - neighbor.Weights[i]);
+                     neighbor.Weights[i] = neighbor.Weights[i] + GetDistanceFactor(neighbor) * _weightFactor * (vector.Values[i] - neighbor.Weights[i]);
                 }
             }
         }
@@ -155,13 +156,23 @@ namespace SOM
             {
                 return false;
             }
-            foreach (KeyValuePair<InputVector, Node> node in _vectorToNodes)
+            foreach (Node node in _nodesMatrix)
             {
-                if (GetDistance(node.Key, node.Value) > _desiredPrecision)
+                for (int i = 0; i < node.Weights.Count; i++)
                 {
-                    return false;
+                    if (Math.Abs(node.Weights[i] - node.OldWeights[i]) > _desiredPrecision)
+                    {
+                        return false;
+                    }
                 }
             }
+            //foreach (KeyValuePair<InputVector, Node> node in _vectorToNodes)
+            //{
+            //    if (GetDistance(node.Key, node.Value) > _desiredPrecision)
+            //    {
+            //        return false;
+            //    }
+            //}
             return true;
         }
 

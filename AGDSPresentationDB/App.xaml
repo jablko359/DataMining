@@ -14,5 +14,6 @@
         <tools:RelativeDepthToGraphNodeConverter x:Key="RelativeDepthToGraphNodeConverter"/>
         <tools:IsSearchExtendedToVisibilityConverter x:Key="SearchExtendedToVisibilityConverter"/>
         <tools:IsEnumSetToVisibilityConverter x:Key="IsEnumSetToVisibilityConverter"/>
+        <tools:IsDbPrimaryKeyToVisibility x:Key="IsDbPrimaryKeyToVisibility"/>
     </Application.Resources>
 </Application>

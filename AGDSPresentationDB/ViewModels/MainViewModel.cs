@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -24,6 +25,7 @@ namespace AGDSPresentationDB.ViewModels
 
         private string _dbName;
         private string _searchText;
+        private string _performance = "0";
         private AGDSGraph _graph;
 
         private Command _loadCommand;
@@ -47,7 +49,7 @@ namespace AGDSPresentationDB.ViewModels
 
         #endregion
         #region Properties
-        
+
 
         public int SearchDepth
         {
@@ -113,7 +115,7 @@ namespace AGDSPresentationDB.ViewModels
             }
         }
 
-        
+
 
         public NodesGraph SelectedItemsGraph
         {
@@ -147,6 +149,17 @@ namespace AGDSPresentationDB.ViewModels
                 OnPropertyChanged(nameof(SelectedLayout));
             }
         }
+
+        public string Performance
+        {
+            get { return _performance; }
+            set
+            {
+                _performance = value;
+                OnPropertyChanged(nameof(Performance));
+            }
+        }
+
 
         public AGDSGraph AgdsGraph
         {
@@ -213,7 +226,7 @@ namespace AGDSPresentationDB.ViewModels
                     writer.Write(querry);
                     writer.Flush();
                     str.Position = 0;
-                    
+
                     AntlrInputStream inputStream = new AntlrInputStream(str);
                     QueryLexer lexer = new QueryLexer(inputStream);
                     CommonTokenStream tokenStream = new CommonTokenStream(lexer);
@@ -224,7 +237,10 @@ namespace AGDSPresentationDB.ViewModels
                     InputQueryInterpreter interpreter = new InputQueryInterpreter();
                     walker.Walk(interpreter, context);
                     str.Close();
+                    Stopwatch stopwatch = Stopwatch.StartNew();
                     List<Node> selected = _graph.Search(interpreter.TopQuery, SearchDepth);
+                    stopwatch.Stop();
+                    Performance = stopwatch.ElapsedMilliseconds.ToString();
                     NodesGraph selectedNodesGraph = new NodesGraph(false);
                     selectedNodesGraph.BuildGraphFromSelected(selected);
                     SelectedItemsGraph = selectedNodesGraph;
@@ -292,7 +308,7 @@ namespace AGDSPresentationDB.ViewModels
                 _graph.DeleteItem(node);
             }
             BuildVisualGraph();
-            OnPropertyChanged("Nodes");
+            OnPropertyChanged(nameof(Nodes));
         }
 
         private void HideDepth(object parameter)
@@ -317,7 +333,7 @@ namespace AGDSPresentationDB.ViewModels
             else
             {
                 MessageBox.Show("Too big graph. Graph tab will be unavaliable!", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 IsGraphAvaliable = false;
             }
         }

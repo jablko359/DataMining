@@ -9,6 +9,7 @@ namespace SOM
     public class Node
     {
         private List<double> _weights;
+        private List<double> _oldWeights; 
         private static Random WeightGeneratoRandom = new Random();
 
         public static double Scale = 1;
@@ -16,6 +17,12 @@ namespace SOM
         public List<double> Weights
         {
             get { return _weights; }
+        }
+
+        public List<double> OldWeights
+        {
+            get { return _oldWeights; }
+            set { _oldWeights = value; }
         }
 
         private int _xPos;
@@ -40,10 +47,12 @@ namespace SOM
             _xPos = xpos;
             
             _weights = new List<double>(size);
+          
             for (int i = 0; i < size; i++)
             {
                 _weights.Add(WeightGeneratoRandom.NextDouble() * Scale);
             }
+            _oldWeights = _oldWeights = new List<double>(_weights);
         }
 
         public override string ToString()

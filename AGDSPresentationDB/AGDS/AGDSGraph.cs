@@ -49,10 +49,9 @@ namespace AGDSPresentationDB.AGDS
             _allNodes = allNodes;
         }
         #region Searching
-        //Orders.ShipCountry = 'Argentina'
+    
         public List<Node> Search(Query queries, int maxDepth)
         {
-            Stopwatch watch = Stopwatch.StartNew();
             List<Node> result = SearchNodes(queries, maxDepth);
             foreach (Node node in _allNodes)
             {
@@ -73,7 +72,6 @@ namespace AGDSPresentationDB.AGDS
             {
                 node.IsSelected = true;
             }
-            watch.Stop();
             return result;
         }
 
@@ -249,9 +247,18 @@ namespace AGDSPresentationDB.AGDS
 
         public void DeleteItem(Node node)
         {
-
-
+            List<Node> connectedNodes = node.Nodes.Values.ToList();
             node.Clear();
+            if (node.Value is DbPrimaryKey)
+            {
+                foreach (Node connectedNode in connectedNodes)
+                {
+                    if (!connectedNode.Nodes.Values.Any(item => item.Value is DbPrimaryKey))
+                    {
+                        DeleteItem(connectedNode);
+                    }
+                }
+            }
             _allNodes.Remove(node);
             _repetors.Remove(node.Key);
         }
