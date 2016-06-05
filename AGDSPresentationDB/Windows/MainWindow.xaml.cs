@@ -24,7 +24,7 @@ namespace AGDSPresentationDB.Windows
                 int value;
                 if (int.TryParse(input, out value))
                 {
-                    if (value <= AGDSGraph.MaxSearchDepth && value >= AGDSGraph.MinSearchDepth)
+                    if (value <= AGDSGraph.MaxSearchDepth && value >=0)
                     {
                         e.Handled = false;
                         return;

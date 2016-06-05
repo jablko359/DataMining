@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Policy;
+using AGDSPresentationDB.Parser;
 using AGDSPresentationDB.Tools;
 using AGDSPresentationDB.ViewModels;
 using QuickGraph;
@@ -16,7 +17,7 @@ namespace AGDSPresentationDB.AGDS
         private int _maxDepth = 0;
 
         public const int MaxSearchDepth = 10;
-        public const int MinSearchDepth = 10;
+        public const int MinSearchDepth = 1;
 
         public int MaxDepth
         {
@@ -47,96 +48,64 @@ namespace AGDSPresentationDB.AGDS
             _repetors = receptors;
             _allNodes = allNodes;
         }
-        #region Find
-        public void FindInGraph(IReadOnlyDictionary<string, Query> receptorDictionary)
+        #region Searching
+        //Orders.ShipCountry = 'Argentina'
+        public List<Node> Search(Query queries, int maxDepth)
         {
-            foreach (var node in _allNodes)
+            Stopwatch watch = Stopwatch.StartNew();
+            List<Node> result = SearchNodes(queries, maxDepth);
+            foreach (Node node in _allNodes)
             {
-                node.Weight = 0;
+                node.IsSelected = false;
             }
-            foreach (var nodeQuery in receptorDictionary)
+            foreach (var repetor in _repetors.Values)
             {
-                Node receptorNode;
-                if (_repetors.TryGetValue(nodeQuery.Key, out receptorNode))
+                foreach (var argument in repetor.Nodes.Values)
                 {
-                    receptorNode.Weight = int.MinValue;
-                    foreach (var value in receptorNode.Nodes.Values)
+                    if (argument.Nodes.Values.Any(item => result.Contains(item)))
                     {
-                        if (CompareValues(nodeQuery.Value, value))
-                        {
-                            value.Weight = int.MinValue;
-                            foreach (var node in value.Nodes.Values)
-                            {
-                                node.Weight++;
-                                foreach (var subNode in node.Nodes.Values)
-                                {
-                                    subNode.Weight++;
-                                    if (subNode.Value is DbPrimaryKey)
-                                    {
-
-                                        foreach (Node itemNode in subNode.Nodes.Values)
-                                        {
-                                            itemNode.Weight++;
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        result.Add(argument);
+                        result.Add(repetor);
                     }
                 }
             }
-
-            //foreach (Node receptor in _repetors.Values)
-            //{
-            //    if (receptorDictionary.ContainsKey(receptor.Value.ToString().ToLower()))
-            //    {
-            //        Query qr = receptorDictionary[receptor.Value.ToString().ToLower()];
-            //        receptor.Weight = Int32.MinValue;
-            //        List<Node> items = receptor.Nodes.Values.ToList();
-            //        foreach (Node item in items)
-            //        {
-            //            if (CompareValues(qr, item))
-            //            {
-            //                item.Weight = Int32.MinValue;
-            //                foreach (Node node in item.Nodes.Values)
-            //                {
-            //                    node.IsMarked = true;
-            //                    node.Weight++;
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-            ////TodO ?
-            //foreach (var node in _allNodes.Where(node => node.IsMarked))
-            //{
-            //    foreach (Node subNode in node.Nodes.Values)
-            //    {
-            //        subNode.Weight++;
-            //        foreach (Node parameterNode in subNode.Nodes.Values.Where(parameterNode => !(parameterNode.Value is DbPrimaryKey)))
-            //        {
-            //            parameterNode.Weight++;
-            //        }
-            //    }
-            //}
-        }
-       
-        public List<Node> SearcNodes(IReadOnlyDictionary<string, Query> queries, int maxDepth)
-        {
-            //ToDo parse by tree
-            List<Node> results = new List<Node>();
-            foreach (var pair in queries)
+            foreach (Node node in result)
             {
-                results.AddRange(Find(pair.Value, maxDepth));
+                node.IsSelected = true;
             }
-            //ToDo set Is Selected based on query and quqer list
+            watch.Stop();
+            return result;
+        }
 
-
+        private List<Node> SearchNodes(Query queries, int maxDepth)
+        {
+            ////ToDo parse by tree
+            List<Node> results = new List<Node>();
+            List<Node> leftResult = new List<Node>();
+            List<Node> rightResult = new List<Node>();
+            if (queries.LeftQuery != null && queries.RightQuery != null)
+            {
+                leftResult = SearchNodes(queries.LeftQuery, maxDepth);
+                rightResult = SearchNodes(queries.RightQuery, maxDepth);
+                switch (queries.Logic)
+                {
+                    case QueryLogic.And:
+                        results = leftResult.Intersect(rightResult).ToList();
+                        break;
+                    case QueryLogic.Or:
+                        results = leftResult.Union(rightResult).ToList();
+                        break;
+                }
+            }
+            else if (queries.Expression != null)
+            {
+                results.AddRange(Find(queries, maxDepth));
+            }
             return results;
         }
 
-      
-        public List<Node> Find(Query inputQuery, int maxDepth)
+
+        private List<Node> Find(Query inputQuery, int maxDepth)
         {
             List<Node> resultGraph = new List<Node>();
             foreach (Node node in _allNodes)
@@ -145,7 +114,7 @@ namespace AGDSPresentationDB.AGDS
             }
             Dictionary<Query, List<Node>> fullfilledDictionary = new Dictionary<Query, List<Node>>();
             Node receptorNode;
-            if (_repetors.TryGetValue(inputQuery.QueryName.Trim(), out receptorNode))
+            if (_repetors.TryGetValue(inputQuery.Expression.QueryName.Trim(), out receptorNode))
             {
                 receptorNode.IsSelected = true;
                 string receptorName = receptorNode.Value.ToString();
@@ -153,7 +122,7 @@ namespace AGDSPresentationDB.AGDS
 
                 foreach (Node item in items)
                 {
-                    if (CompareValues(inputQuery, item))
+                    if (CompareValues(inputQuery.Expression, item))
                     {
                         item.IsSelected = true;
                         foreach (Node node in item.Nodes.Values)
@@ -175,53 +144,77 @@ namespace AGDSPresentationDB.AGDS
                     receptor.IsSelected = true;
                 }
             }
-            resultGraph.AddRange(_allNodes.Where(item => item.IsSelected));
-            
+            resultGraph.AddRange(_allNodes.Where(item => item.IsSelected && item.Value is DbPrimaryKey));
+
             return resultGraph;
         }
-
-        public void FindDepth(IReadOnlyDictionary<string, string> receptorDictionary)
-        {
-            foreach (Node node in _allNodes)
-            {
-                node.IsSelected = false;
-            }
-            foreach (Node receptor in _repetors.Values)
-            {
-                receptor.IsSelected = true;
-                receptor.CurrentDepth = 0;
-                if (receptorDictionary.ContainsKey(receptor.Value.ToString().ToLower()))
-                {
-                    List<Node> items = receptor.Nodes.Values.ToList();
-                    string searchingValue = receptorDictionary[receptor.Value.ToString().ToLower()];
-                    foreach (Node item in items)
-                    {
-                        if (item.Value.ToString().ToLower() == searchingValue)
-                        {
-                            item.IsSelected = true;
-                            item.CurrentDepth = 0;
-                            foreach (Node node in item.Nodes.Values)
-                            {
-                                node.IsSelected = true;
-                                node.CurrentDepth = 0;
-                                DbPrimaryKey tableName = node.Value as DbPrimaryKey;
-                                if (tableName != null)
-                                {
-                                    node.SetConnectedNodes(item, 1);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            MaxDepth = _allNodes.Select(item => item.CurrentDepth).Max();
-        }
+        #region Old
+        //public void FindDepth(Dictionary<string, string> receptorDictionary)
+        //{
+        //    foreach (Node node in _allNodes)
+        //    {
+        //        node.IsSelected = false;
+        //    }
+        //    foreach (Node receptor in _repetors.Values)
+        //    {
+        //        receptor.IsSelected = true;
+        //        receptor.CurrentDepth = 0;
+        //        if (receptorDictionary.ContainsKey(receptor.Value.ToString().ToLower()))
+        //        {
+        //            List<Node> items = receptor.Nodes.Values.ToList();
+        //            string searchingValue = receptorDictionary[receptor.Value.ToString().ToLower()];
+        //            foreach (Node item in items)
+        //            {
+        //                if (item.Value.ToString().ToLower() == searchingValue)
+        //                {
+        //                    item.IsSelected = true;
+        //                    item.CurrentDepth = 0;
+        //                    foreach (Node node in item.Nodes.Values)
+        //                    {
+        //                        node.IsSelected = true;
+        //                        node.CurrentDepth = 0;
+        //                        DbPrimaryKey tableName = node.Value as DbPrimaryKey;
+        //                        if (tableName != null)
+        //                        {
+        //                            node.SetConnectedNodes(item, 1);
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    MaxDepth = _allNodes.Select(item => item.CurrentDepth).Max();
+        //}
         #endregion
-        private static bool CompareValues(Query query, Node itemNode)
+        #endregion
+        private static bool CompareValues(Expression query, Node itemNode)
         {
             try
             {
                 bool result = false;
+                string itemNodeString = itemNode.Value as string;
+                if (itemNodeString != null)
+                {
+                    switch (query.CompareType)
+                    {
+                        case CompareOperator.Equals:
+                            result = string.Compare(itemNodeString, query.Value.ToString()) == 0;
+                            break;
+                        case CompareOperator.GreaterThan:
+                            result = string.Compare(itemNodeString, query.Value.ToString()) > 0;
+                            break;
+                        case CompareOperator.LessThan:
+                            result = string.Compare(itemNodeString, query.Value.ToString()) < 0;
+                            break;
+                        case CompareOperator.GreaterEqualsThan:
+                            result = string.Compare(itemNodeString, query.Value.ToString()) >= 0;
+                            break;
+                        case CompareOperator.LessEqualThan:
+                            result = string.Compare(itemNodeString, query.Value.ToString()) <= 0;
+                            break;
+                    }
+                    return result;
+                }
                 IComparable itemComparable = itemNode.Value as IComparable;
                 IComparable valueComparable = query.Value as IComparable;
                 if (itemComparable != null && valueComparable != null)

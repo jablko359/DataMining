@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data.SqlClient;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using AGDSPresentationDB.AGDS;
 using AGDSPresentationDB.Annotations;
+using AGDSPresentationDB.Parser;
 using AGDSPresentationDB.Services;
 using AGDSPresentationDB.Tools;
 using AGDSPresentationDB.Windows;
+using Antlr4.Runtime;
+using Antlr4.Runtime.Tree;
 using GraphSharp.Controls;
 
 namespace AGDSPresentationDB.ViewModels
@@ -21,7 +25,6 @@ namespace AGDSPresentationDB.ViewModels
         private string _dbName;
         private string _searchText;
         private AGDSGraph _graph;
-        private SearchOption _searchOpt;
 
         private Command _loadCommand;
         private Command _openDbSelectCommand;
@@ -41,15 +44,9 @@ namespace AGDSPresentationDB.ViewModels
         private int _searchDepth = 3;
 
         private const int NodesLimit = 300;
-        public const string SearchDepthString = "Powiązane klucze";
-        public const string SearchDefaultString = "Standard";
-        public const string SearchExtendedString = "Rozwinięte";
 
         #endregion
         #region Properties
-
-        public List<string> SearchOptions { get; private set; }
-
         
 
         public int SearchDepth
@@ -59,17 +56,6 @@ namespace AGDSPresentationDB.ViewModels
             {
                 _searchDepth = value;
                 OnPropertyChanged(nameof(SearchDepth));
-            }
-        }
-
-
-        public SearchOption SearchOpt
-        {
-            get { return _searchOpt; }
-            set
-            {
-                _searchOpt = value;
-                OnPropertyChanged(nameof(SearchOpt));
             }
         }
 
@@ -211,8 +197,6 @@ namespace AGDSPresentationDB.ViewModels
             _resetCommand = new Command(Reset);
             _deleteNodeCommand = new Command(DeleteNode);
             _hideDepthCommand = new Command(HideDepth);
-
-            SearchOptions = new List<string>(new[] { SearchDefaultString, SearchDepthString, SearchExtendedString });
         }
         #endregion
         #region CommandDelegates
@@ -224,33 +208,26 @@ namespace AGDSPresentationDB.ViewModels
                 var querry = (paramerer as string).Trim();
                 if (!string.IsNullOrEmpty(querry) && _graph != null)
                 {
-                    QueryParser querryParser = new QueryParser(querry);
-                    List<Node> selected;
-                    if (querryParser.ParseQuerry())
-                    {
-                        switch (_searchOpt)
-                        {
-                            case SearchOption.Default:
-                                selected = _graph.SearcNodes(querryParser.Querries, SearchDepth);
-                                NodesGraph selectedNodesGraph = new NodesGraph(false);
-                                selectedNodesGraph.BuildGraphFromSelected(selected);
-                                SelectedItemsGraph = selectedNodesGraph;
-                                break;
-                            //case SearchOption.Depth:
-                            //    _graph.FindDepth(querryParser.Querries);
-                            //    break;
-                            case SearchOption.Extended:
-                                _graph.FindInGraph(querryParser.Querries);
-                                break;
-                        }
-                       
-                        OnPropertyChanged(nameof(MaxDepth));
-                    }
-                    else
-                    {
-                        MessageBox.Show("Incorrect input");
-                    }
+                    Stream str = new MemoryStream();
+                    StreamWriter writer = new StreamWriter(str);
+                    writer.Write(querry);
+                    writer.Flush();
+                    str.Position = 0;
+                    
+                    AntlrInputStream inputStream = new AntlrInputStream(str);
+                    QueryLexer lexer = new QueryLexer(inputStream);
+                    CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+                    QueryParser parser = new QueryParser(tokenStream);
+                    QueryParser.QueryContext context = parser.query();
 
+                    ParseTreeWalker walker = new ParseTreeWalker();
+                    InputQueryInterpreter interpreter = new InputQueryInterpreter();
+                    walker.Walk(interpreter, context);
+                    str.Close();
+                    List<Node> selected = _graph.Search(interpreter.TopQuery, SearchDepth);
+                    NodesGraph selectedNodesGraph = new NodesGraph(false);
+                    selectedNodesGraph.BuildGraphFromSelected(selected);
+                    SelectedItemsGraph = selectedNodesGraph;
                 }
             }
             catch (Exception ex)

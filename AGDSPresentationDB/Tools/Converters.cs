@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Net.Http.Headers;
+
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -35,49 +35,6 @@ namespace AGDSPresentationDB.Tools
         }
     }
 
-    public class SearchOptionToStringConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-
-            SearchOption opt = (SearchOption)value;
-            string output = null;
-            switch (opt)
-            {
-                case SearchOption.Default:
-                    output = MainViewModel.SearchDefaultString;
-                    break;
-                case SearchOption.Depth:
-                    output = MainViewModel.SearchDepthString;
-                    break;
-                case SearchOption.Extended:
-                    output = MainViewModel.SearchExtendedString;
-                    break;
-            }
-            return output;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            string name = value.ToString();
-            if (name == MainViewModel.SearchDefaultString)
-            {
-                return SearchOption.Default;
-            }
-            else if (name == MainViewModel.SearchDepthString)
-            {
-                return SearchOption.Depth;
-            }
-            else if(name == MainViewModel.SearchExtendedString)
-            {
-                return SearchOption.Extended;
-            }
-            else
-            {
-                throw new ArgumentException();
-            }
-        }
-    }
 
     public class SearchOptToDepthVisibiliy : IValueConverter
     {
@@ -124,42 +81,12 @@ namespace AGDSPresentationDB.Tools
             {
                 return Brushes.PaleGreen;
             }
-            SearchOption option = (SearchOption)values[0];
-            bool isSelected = (bool)values[1];
-            if (option == SearchOption.Default)
-            {
-                if (isSelected)
-                {
-                    return Brushes.PaleGreen;
-                }
-                return Brushes.Transparent;
-            }
-            else if(option == SearchOption.Depth)
-            {
-                if (!isSelected)
-                {
-                    return Brushes.Transparent;
-                }
-                RelativeDepthToColorConverter converter = new RelativeDepthToColorConverter();
-                object[] subvalues = { values[2], values[3] };
-                return converter.Convert(subvalues, targetType, parameter, culture);
-            }
-            if (option == SearchOption.Extended)
-            {
-                int weight = (int)values[4];
-                if (weight == Int32.MinValue)
-                {
-                    return Brushes.Yellow;
-                }
-                else
-                {
-                    return Brushes.PaleGreen;
-                }
-            }
-            else
+            bool isSelected = (bool)values[0];
+            if (isSelected)
             {
                 return Brushes.PaleGreen;
             }
+            return Brushes.Transparent;
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)

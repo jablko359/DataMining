@@ -28,16 +28,9 @@
                             </ContextMenu>
                         </StackPanel.ContextMenu>
                     </StackPanel>
-                    <TextBlock Text="{Binding CurrentDepth, StringFormat=Odległość: {0}}" Foreground="Red" TextAlignment="Center"
-                               Visibility="{Binding Source={StaticResource MainViewModel}, Path=SearchOpt, Converter={StaticResource SearchOptToDepthVisibiliy}}">
-                    </TextBlock>
-                    <TextBlock Text="{Binding Weight, StringFormat=Waga: {0}}" Foreground="Red" TextAlignment="Center"
-                               Visibility="{Binding Source={StaticResource MainViewModel}, Path=SearchOpt, Converter={StaticResource SearchExtendedToVisibilityConverter}}">
-                    </TextBlock>
                 </StackPanel>
                 <Border.Background>
                     <MultiBinding Converter="{StaticResource RelativeDepthToGraphNodeConverter}">
-                        <Binding Source="{StaticResource MainViewModel}" Path="SearchOpt" />
                         <Binding Path="IsSelected"/>
                         <Binding Path="CurrentDepth"/>
                         <Binding Source="{StaticResource MainViewModel}" Path="AgdsGraph.MaxDepth"/>
@@ -79,29 +72,17 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="auto"/>
-                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="75"/>
                 <ColumnDefinition Width="75"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="Zapytanie"/>
             <TextBox Margin="5 0" Grid.Column="1" Grid.Row="0" Text="{Binding SearchText}" x:Name="SearchBox"/>
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="5 0 5 0" Visibility="{Binding SearchOpt, Converter={StaticResource IsEnumSetToVisibilityConverter}, ConverterParameter=Default}">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="5 0 5 0">
                 <TextBlock Text="Limit odległości kluczy:" Margin="5 0 5 0"></TextBlock>
                 <TextBox Width="30"  Text="{Binding SearchDepth}" PreviewTextInput="NumericTextBoxPrevievInput" TextAlignment="Right"/>
             </StackPanel>
-            <ComboBox Grid.Column="3" Grid.Row="0" ItemsSource="{Binding SearchOptions}" SelectedItem="{Binding SearchOpt, Converter={StaticResource SearchOptionToStringConverter}, Mode=TwoWay}"/>
-            <Button Margin="5 0 5 0" Grid.Column="4" Grid.Row="0" Content="Filtruj" Command="{Binding SearchCommand}" CommandParameter="{Binding ElementName=SearchBox, Path=Text}" IsDefault="True" />
-            <Button Grid.Column="5" Grid.Row="0" Content="Reset" Command="{Binding ResetCommand}" ></Button>
-        </Grid>
-        <Grid DockPanel.Dock="Top" Visibility="{Binding SearchOpt, Converter={StaticResource SearchOptToDepthVisibiliy}}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="150"/>
-                <ColumnDefinition Width="150"/>
-            </Grid.ColumnDefinitions>
-            <Slider Grid.Column="0" x:Name="depthSlider" Maximum="{Binding MaxDepth}" Minimum="0" IsSnapToTickEnabled="True" TickFrequency="1" />
-            <TextBlock Grid.Column="1" Text="{Binding ElementName=depthSlider, Path=Value, StringFormat=Poziom asocjacji: {0}}" />
-            <Button Grid.Column="2" Content="Zastosuj" Command="{Binding HideDepthCommand}" CommandParameter="{Binding ElementName=depthSlider, Path=Value}" Margin="0 0 5 0" />
+            <Button Margin="5 0 5 0" Grid.Column="3" Grid.Row="0" Content="Filtruj" Command="{Binding SearchCommand}" CommandParameter="{Binding ElementName=SearchBox, Path=Text}" IsDefault="True" />
+            <Button Grid.Column="4" Grid.Row="0" Content="Reset" Command="{Binding ResetCommand}" ></Button>
         </Grid>
         <TabControl DockPanel.Dock="Top">
             <TabItem Header="Drzewo">
@@ -110,18 +91,6 @@
                         <HierarchicalDataTemplate DataType="{x:Type agds:Node}" ItemsSource="{Binding Nodes.Values}">
                             <StackPanel Orientation="Horizontal" Tag="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                                 <TextBlock Text="{Binding Value}" Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                <TextBlock Text="{Binding CurrentDepth, StringFormat=odległość: {0}}" Margin="5 0 0 0"
-                               Visibility="{Binding Source={StaticResource MainViewModel}, Path=SearchOpt, Converter={StaticResource SearchOptToDepthVisibiliy}}">
-                                <TextBlock Text="{Binding Weight, StringFormat=Waga: {0}}" Foreground="Red" TextAlignment="Center"
-                               >
-                                </TextBlock>
-                                    <TextBlock.Foreground>
-                                        <MultiBinding Converter="{StaticResource RelativeDepthToColorConverter}">
-                                            <Binding Path="CurrentDepth"/>
-                                            <Binding Source="{StaticResource MainViewModel}" Path="AgdsGraph.MaxDepth" ></Binding>
-                                        </MultiBinding>
-                                    </TextBlock.Foreground>
-                                </TextBlock>
                                 <StackPanel.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="Usuń węzeł" Command="{Binding RelativeSource={RelativeSource AncestorType=ContextMenu}, Path=PlacementTarget.Tag.DataContext.DeleteNodeCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=ContextMenu}, Path=PlacementTarget.DataContext}" ></MenuItem>

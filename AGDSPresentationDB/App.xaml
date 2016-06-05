@@ -9,7 +9,6 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <viewModels:MainViewModel x:Key="MainViewModel"/>
         <tools:IsSelectedToBackgroundConverter x:Key="BackgroundConverter"/>
-        <tools:SearchOptionToStringConverter x:Key="SearchOptionToStringConverter"/>
         <tools:RelativeDepthToColorConverter x:Key="RelativeDepthToColorConverter"/>
         <tools:SearchOptToDepthVisibiliy x:Key="SearchOptToDepthVisibiliy"/>
         <tools:RelativeDepthToGraphNodeConverter x:Key="RelativeDepthToGraphNodeConverter"/>

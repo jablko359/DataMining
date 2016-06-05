@@ -25,7 +25,7 @@ namespace AGDSPresentationDB.AGDS
             get { return _tables.Values.ToList(); }
         }
 
-        public IReadOnlyList<DbRelation> Relations
+        public List<DbRelation> Relations
         {
             get { return _relations; }
         }
@@ -215,12 +215,12 @@ namespace AGDSPresentationDB.AGDS
             set { _primaryKey = value; }
         }
 
-        public IReadOnlyDictionary<object, DbTable> RealtedTables
+        public Dictionary<object, DbTable> RealtedTables
         {
             get { return _relatedDbTables; }
         }
 
-        public IReadOnlyDictionary<string, List<object>> TableDictionary
+        public Dictionary<string, List<object>> TableDictionary
         {
             get { return _tableDictionary; }
         } 
