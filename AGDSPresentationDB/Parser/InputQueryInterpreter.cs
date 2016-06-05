@@ -104,6 +104,25 @@ namespace AGDSPresentationDB.Parser
                     {
                         parentQuery.RightQuery = createdQuery;
                     }
+                    else if(parentContext != null)
+                    {
+                        if (parentContext.query(0).query(1) == context)
+                        {
+                            parentQuery.LeftQuery = createdQuery;
+                        }
+                        else if (parentContext.query(0).query(0) == context)
+                        {
+                            parentQuery.LeftQuery = createdQuery;
+                        }
+                        else if (parentContext.query(1).query(0) == context)
+                        {
+                            parentQuery.RightQuery = createdQuery;
+                        }
+                        else if (parentContext.query(1).query(1) == context)
+                        {
+                            parentQuery.RightQuery = createdQuery;
+                        }
+                    }
                 }
                 if (_topQuery == null)
                 {
